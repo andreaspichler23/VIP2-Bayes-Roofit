@@ -15,15 +15,11 @@
 
 using namespace RooFit;
 
-void fitNoCurrent()
+void fitWithSignal()
 {
 // how to:?
-// make a function for the spectrum (constBG + cuka1 + cuka2 + nika1 + nika2) and fit it to the no current data
-// then fix the parameter for the constBG and add a signal gaussian with fixed width and mean and variable gain
-// add the uncertainty of the constBG as nuisance parameter
-// also fit the cuka1, cuka2, nika1, nika2 parameters new!
 
-// or go full simultaneous fit and fit both histograms simultaneously while leaving the slope?? in common
+
 
   // get the histograms
 
@@ -88,10 +84,10 @@ void fitNoCurrent()
 
   // PEP violating tranistion
 
-  RooRealVar meanForbidden("meanForbidden","mean of the forbidden tranistion", 8047.78, 8047.,8048.);
+  RooRealVar meanForbidden("meanForbidden","mean of the forbidden tranistion", 7748, 7747.,7749.);
   RooGaussian gaussForbidden("gaussForbidden","Forbidden pdf",energy,meanForbidden,sigmaCuKa);
 
-  RooRealVar Nsig("Nsig","signal Events",0,0,10000);
+  RooRealVar Nsig("Nsig","signal Events",0,-10000.,10000);
   
   
   //RooUniform backgF("backgF","background PDF",energy);
@@ -136,25 +132,26 @@ void fitNoCurrent()
   //For low statistics, fix the mean and the width
   //mean.setConstant(kTRUE);
   //sigma.setConstant(kTRUE);
-  PDFtot.fitTo(noDH);
+  PDFtot.fitTo(withDH);
 
   
   //Now plot the data and the fitted PDF
   RooPlot *energyFrame = energy.frame(50);
-  noDH.plotOn(energyFrame);
+  withDH.plotOn(energyFrame);
   PDFtot.plotOn(energyFrame);
 
   //One can also plot the single components of the total PDF, like the background component
   PDFtot.plotOn(energyFrame,Components(backgF),LineStyle(kDashed),LineColor(kRed));
   PDFtot.plotOn(energyFrame,Components(gaussCuKa1),LineStyle(kDashed),LineColor(kBlack));
-  PDFtot.plotOn(energyFrame,Components(gaussCuKa2),LineStyle(kDashed),LineColor(kYellow));
+  PDFtot.plotOn(energyFrame,Components(gaussCuKa2),LineStyle(kDashed),LineColor(kBlack));
   PDFtot.plotOn(energyFrame,Components(gaussNiKa1),LineStyle(kDashed),LineColor(kGreen));
+  PDFtot.plotOn(energyFrame,Components(gaussForbidden),LineStyle(kDashed),LineColor(kYellow));
 
   //Actually plot the result
   TCanvas c1;
   c1.cd();
   energyFrame->Draw();
-  c1.SaveAs("fitNoCurrent.gif");
+  c1.SaveAs("fitWithCurrent.gif");
 
   // Print values of mean and sigma (that now reflect fitted values and errors, unless you fixed them)
   meanCuKa1.Print();
@@ -170,7 +167,7 @@ void fitNoCurrent()
   w->import(PDFtot);
  
 
-  TFile fOut("fitNoCurrent.root","RECREATE");
+  TFile fOut("fitWithCurrentWithSignal.root","RECREATE");
   fOut.cd();
   w->Write();
   fOut.Close();

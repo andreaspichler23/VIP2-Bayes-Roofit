@@ -15,7 +15,7 @@
 
 using namespace RooFit;
 
-void fitNoCurrent()
+void fitNoSignal()
 {
 // how to:?
 // make a function for the spectrum (constBG + cuka1 + cuka2 + nika1 + nika2) and fit it to the no current data
@@ -86,12 +86,6 @@ void fitNoCurrent()
   RooRealVar backC("backC","background constant",500,0,100000);
   RooRealVar backSl("backSl","background Slope",0,-1,1);
 
-  // PEP violating tranistion
-
-  RooRealVar meanForbidden("meanForbidden","mean of the forbidden tranistion", 8047.78, 8047.,8048.);
-  RooGaussian gaussForbidden("gaussForbidden","Forbidden pdf",energy,meanForbidden,sigmaCuKa);
-
-  RooRealVar Nsig("Nsig","signal Events",0,0,10000);
   
   
   //RooUniform backgF("backgF","background PDF",energy);
@@ -109,7 +103,7 @@ void fitNoCurrent()
   //RooRealVar NoCurrentN("NoCurrentN","Number of events without current",1000.,0.,2000.);
   //RooRealVar Nbkg("Nbkg","Number of background events",450.,0.,1000.);
 
-  RooAddPdf PDFtot("PDFtot","PDFtot",RooArgList(gaussCuKa1,gaussCuKa2,gaussNiKa1,gaussNiKa2,backgF,gaussForbidden),RooArgList(cuKa1N,cuKa2N,niKa1N,niKa2N,backC,Nsig));
+  RooAddPdf PDFtot("PDFtot","PDFtot",RooArgList(gaussCuKa1,gaussCuKa2,gaussNiKa1,gaussNiKa2,backgF),RooArgList(cuKa1N,cuKa2N,niKa1N,niKa2N,backC));
 
   CuKa2Diff.setConstant(kTRUE);
   CuKa2Ratio.setConstant(kTRUE);
@@ -118,8 +112,7 @@ void fitNoCurrent()
   
   // set the forbidden stuff to constant first
 
-  //Nsig.setConstant(kTRUE); // set to 0 for no current data -> but apparently this must not be set to zero for the model that is later used for the current data!!
-  meanForbidden.setConstant(kTRUE);
+ 
 
   //Now generate a sample with the total PDF
   //RooDataSet *data = PDFtot.generate(RooArgSet(energy),10000,Extended(1));
@@ -170,7 +163,7 @@ void fitNoCurrent()
   w->import(PDFtot);
  
 
-  TFile fOut("fitNoCurrent.root","RECREATE");
+  TFile fOut("fitNoSignalNoCurrent.root","RECREATE");
   fOut.cd();
   w->Write();
   fOut.Close();
