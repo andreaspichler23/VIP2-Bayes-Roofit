@@ -11,6 +11,8 @@ void fitCurrentwithSignal(){
   fno.cd();
   RooWorkspace *noW = (RooWorkspace*)fno.Get("w");
   
+  noW->Print();
+  
   RooRealVar *noBackC = noW->var("backC");
   RooRealVar *noBackSl = noW->var("backSl");
 
@@ -20,6 +22,7 @@ void fitCurrentwithSignal(){
   
   //First, define the observable for the analysis
   RooRealVar energy("energy","energy",7000.,8600.);
+  //RooRealVar energy("energy","energy",7600.,7850.);
 
 
   //--------------------------------------------------Construct the P.D.F. with a forbidden PEP signal component ------------------------------------
@@ -65,17 +68,19 @@ void fitCurrentwithSignal(){
 
   RooRealVar backC("backC","background constant",500,0,100000);
   RooRealVar backSl("backSl","background Slope",0,-1,1);
-
+  
+  RooChebychev backgF("backgF","Background",energy,RooArgSet(backSl));
+  
   // PEP violating tranistion
 
-  RooRealVar meanForbidden("meanForbidden","mean of the forbidden tranistion", 7748, 7747.,7749.);
+  RooRealVar meanForbidden("meanForbidden","mean of the forbidden tranistion", 7729, 7728.,7730.);
   RooGaussian gaussForbidden("gaussForbidden","Forbidden pdf",energy,meanForbidden,sigmaCuKa);
 
   RooRealVar Nsig("Nsig","signal Events",0,-10000.,10000);
   
-  RooChebychev backgF("backgF","Background",energy,RooArgSet(backSl));
   
-  RooAddPdf PDFtot("PDFtot","PDFtot",RooArgList(gaussCuKa1,gaussCuKa2,gaussNiKa1,gaussNiKa2,backgF,gaussForbidden),RooArgList(cuKa1N,cuKa2N,niKa1N,niKa2N,backC,Nsig));
+  
+  RooAddPdf PDFwith("PDFwith","PDFwith",RooArgList(gaussCuKa1,gaussCuKa2,gaussNiKa1,gaussNiKa2,backgF,gaussForbidden),RooArgList(cuKa1N,cuKa2N,niKa1N,niKa2N,backC,Nsig));
   
   CuKa2Diff.setConstant(kTRUE);
   CuKa2Ratio.setConstant(kTRUE);
@@ -86,9 +91,9 @@ void fitCurrentwithSignal(){
   
   
   backC.setVal(noBackCDouble);
-  backC.setConstant(kTRUE);
+  backC.setConstant(kTRUE); // for no current data:   3.18384e+04
   backSl.setVal(noBackSlDouble);
-  backSl.setConstant(kTRUE);
+  backSl.setConstant(kTRUE); // for no current data:   -5.17610e-02
   
   backC.Print();
 
@@ -107,18 +112,32 @@ void fitCurrentwithSignal(){
   RooAbsData *withAD = noW->data("withDH");
   RooAbsData *noAD = noW->data("noDH");// data with current is also stored in the workspace with the fit without current
   
-  PDFtot.fitTo(*withAD);
+  PDFwith.fitTo(*withAD);
   
   backC.Print();
   
   RooPlot *energyFrame = noW->var("energy")->frame();
   
+//  TAxis *xaxis = energyFrame->GetXaxis();
+//  xaxis->SetRangeUser(7600,7800);
+//  
+//  TAxis *yaxis = energyFrame->GetYaxis();
+//  yaxis->SetRangeUser(580,700);
+  
   withAD->plotOn(energyFrame);
-  PDFtot.plotOn(energyFrame);
+  PDFwith.plotOn(energyFrame);
+  
+  PDFwith.plotOn(energyFrame,Components(gaussForbidden),LineStyle(kDashed),LineColor(kOrange));
+  PDFwith.plotOn(energyFrame,Components(backgF),LineStyle(kDashed),LineColor(kRed));
+  PDFwith.plotOn(energyFrame,Components(gaussCuKa1),LineStyle(kDashed),LineColor(kBlack));
+  PDFwith.plotOn(energyFrame,Components(gaussCuKa2),LineStyle(kDashed),LineColor(kYellow));
+  PDFwith.plotOn(energyFrame,Components(gaussNiKa1),LineStyle(kDashed),LineColor(kGreen));
+  
   
   //Actually plot the result
   TCanvas c1;
   c1.cd();
+  gPad->SetLogy();
   energyFrame->Draw();
   c1.SaveAs("fitCurrentwithSignal.gif");
   
@@ -127,12 +146,21 @@ void fitCurrentwithSignal(){
   RooWorkspace* w = new RooWorkspace("w") ;
   w->import(*withAD);
   w->import(*noAD);
-  w->import(PDFtot);
+  w->import(PDFwith);
+  //w->import(*energyFrame);
   
   TFile fOut("fitWithCurrentWithSignal-ConstBG.root","RECREATE");
   fOut.cd();
+  energyFrame->Write();
   w->Write();
   fOut.Close();
   fno.Close();
+  
+  cout << endl << "Number of signal counts: " << endl;
+  Nsig.Print();
+  cout << endl;
     
 }
+//TFile *f = new TFile("fitWithCurrentWithSignal-ConstBG.root")
+// f->ls()
+//RooPlot *pl = (RooPlot*)f->Get("frame_energy_3268c50") change the name by the outcome of ls()

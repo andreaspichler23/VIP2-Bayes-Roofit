@@ -15,7 +15,7 @@
 
 using namespace RooFit;
 
-void fitNoSignal(Int_t reBin)
+void fitNoSignalArbHist(TString fitHisto)
 {
 // how to:?
 // make a function for the spectrum (constBG + cuka1 + cuka2 + nika1 + nika2) and fit it to the no current data
@@ -29,11 +29,14 @@ void fitNoSignal(Int_t reBin)
 
   TFile *fIN = new TFile("energyHistograms.root");
   
-  TH1F *withH = (TH1F*)fIN->Get("withCurrentSum");
-  TH1F *noH   = (TH1F*)fIN->Get("noCurrentSmallSum"); 
+  //TH1F *withH = (TH1F*)fIN->Get("withCurrentSum");
+  //TH1F *noH   = (TH1F*)fIN->Get("noCurrentSmallSum"); 
 
-  noH->Rebin(reBin);
-  withH->Rebin(reBin);
+  TH1F *fitH   = (TH1F*)fIN->Get(fitHisto);
+
+  //noH->Rebin(25);
+  //withH->Rebin(25);
+  fitH->Rebin(25);
 
   //withH->Draw();
 
@@ -87,7 +90,6 @@ void fitNoSignal(Int_t reBin)
   RooRealVar backSl("backSl","background Slope",0,-1,1);
 
   
-  
   //RooUniform backgF("backgF","background PDF",energy);
   RooChebychev backgF("backgF","Background",energy,RooArgSet(backSl));
 
@@ -103,7 +105,7 @@ void fitNoSignal(Int_t reBin)
   //RooRealVar NoCurrentN("NoCurrentN","Number of events without current",1000.,0.,2000.);
   //RooRealVar Nbkg("Nbkg","Number of background events",450.,0.,1000.);
 
-  RooAddPdf PDFwithout("PDFwithout","PDFwithout",RooArgList(gaussCuKa1,gaussCuKa2,gaussNiKa1,gaussNiKa2,backgF),RooArgList(cuKa1N,cuKa2N,niKa1N,niKa2N,backC));
+  RooAddPdf PDFtot("PDFtot","PDFtot",RooArgList(gaussCuKa1,gaussCuKa2,gaussNiKa1,gaussNiKa2,backgF),RooArgList(cuKa1N,cuKa2N,niKa1N,niKa2N,backC));
 
   CuKa2Diff.setConstant(kTRUE);
   CuKa2Ratio.setConstant(kTRUE);
@@ -112,7 +114,8 @@ void fitNoSignal(Int_t reBin)
   
   // set the forbidden stuff to constant first
 
- 
+  //Nsig.setConstant(kTRUE); // set to 0 for no current data -> but apparently this must not be set to zero for the model that is later used for the current data!!
+  //meanForbidden.setConstant(kTRUE);
 
   //Now generate a sample with the total PDF
   //RooDataSet *data = PDFtot.generate(RooArgSet(energy),10000,Extended(1));
@@ -120,36 +123,35 @@ void fitNoSignal(Int_t reBin)
   // or take the real data
 
   // Create a binned dataset that imports contents of TH1 and associates its contents to observable 'x'
-  RooDataHist noDH("noDH","noDH",energy,Import(*noH)) ;
-
-  RooDataHist withDH("withDH","withDH",energy,Import(*withH)) ;
+  //RooDataHist noDH("noDH","noDH",energy,Import(*noH));
+  //RooDataHist withDH("withDH","withDH",energy,Import(*withH));
+  RooDataHist fitDH("fitDH","fitDH",energy,Import(*fitH));
   
 
   //Now fit the PDF to the data
   //For low statistics, fix the mean and the width
   //mean.setConstant(kTRUE);
   //sigma.setConstant(kTRUE);
-  PDFwithout.fitTo(noDH);
+  PDFtot.fitTo(fitDH);
 
   
   //Now plot the data and the fitted PDF
   RooPlot *energyFrame = energy.frame(50);
-  //TAxis *yaxis = energyFrame->GetYaxis();
-  noDH.plotOn(energyFrame);
-  PDFwithout.plotOn(energyFrame);
+  //noDH.plotOn(energyFrame);
+  fitDH.plotOn(energyFrame);
+  PDFtot.plotOn(energyFrame);
 
   //One can also plot the single components of the total PDF, like the background component
-  PDFwithout.plotOn(energyFrame,Components(backgF),LineStyle(kDashed),LineColor(kRed));
-  PDFwithout.plotOn(energyFrame,Components(gaussCuKa1),LineStyle(kDashed),LineColor(kBlack));
-  PDFwithout.plotOn(energyFrame,Components(gaussCuKa2),LineStyle(kDashed),LineColor(kYellow));
-  PDFwithout.plotOn(energyFrame,Components(gaussNiKa1),LineStyle(kDashed),LineColor(kGreen));
+  PDFtot.plotOn(energyFrame,Components(backgF),LineStyle(kDashed),LineColor(kRed));
+  PDFtot.plotOn(energyFrame,Components(gaussCuKa1),LineStyle(kDashed),LineColor(kBlack));
+  PDFtot.plotOn(energyFrame,Components(gaussCuKa2),LineStyle(kDashed),LineColor(kYellow));
+  PDFtot.plotOn(energyFrame,Components(gaussNiKa1),LineStyle(kDashed),LineColor(kGreen));
 
   //Actually plot the result
   TCanvas c1;
   c1.cd();
-  gPad->SetLogy();
   energyFrame->Draw();
-  c1.SaveAs("fitNoCurrent.gif");
+  c1.SaveAs("fitArbHisto.gif");
 
   // Print values of mean and sigma (that now reflect fitted values and errors, unless you fixed them)
   meanCuKa1.Print();
@@ -159,17 +161,18 @@ void fitNoSignal(Int_t reBin)
 
   //Now save the data and the PDF into a Workspace, for later use for statistical analysis
   //and save the workspace into a ROOT file
+/*
   RooWorkspace* w = new RooWorkspace("w") ;
   w->import(noDH);
   w->import(withDH);
-  w->import(PDFwithout);
+  w->import(PDFtot);
  
 
-  TFile fOut("fitNoSignalNoCurrent.root","RECREATE");
+  TFile fOut("fitNoCurrent.root","RECREATE");
   fOut.cd();
   w->Write();
   fOut.Close();
   fIN->Close();
-
+*/
 }
 

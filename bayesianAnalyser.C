@@ -21,7 +21,7 @@ void bayesianAnalyser()
 {
 
   //Open the rootfile and get the workspace from the exercise_0
-  TFile fIn("fitWithCurrentWithSignal-ConstBG.root");
+  TFile fIn("fitWithCurrentWithSignal-ConstBG.root"); // in this file the background is set to the values without current
   fIn.cd();
   RooWorkspace *w = (RooWorkspace*)fIn.Get("w");
   
@@ -31,25 +31,30 @@ void bayesianAnalyser()
   //If you leave them floating, the fit procedure will determine their uncertainty
   RooRealVar *nobackC = w->var("backC");
   nobackC->setConstant(kTRUE);
-  nobackC->Print();
+  //nobackC->Print();
   
   RooRealVar *nobackSl = w->var("backSl");
   nobackSl->setConstant(kTRUE);
-  nobackSl->Print();
+  //nobackSl->Print();
+  
+  RooRealVar *cuKa1N = w->var("cuKa1N");
+  RooRealVar *meanCuKa1 = w->var("meanCuKa1");
+  RooRealVar *sigmaCuKa = w->var("sigmaCuKa");
+  RooRealVar *Nsig = w->var("Nsig");
   
   
 
   //Configure the model, we need both the S+B and the B only models
   ModelConfig sbModel;
   sbModel.SetWorkspace(*w);
-  sbModel.SetPdf("PDFtot");
+  sbModel.SetPdf("PDFwith"); // in this model, only the background parameters are constant and the mean of the forbidden transition
   sbModel.SetName("S+B Model");
   RooRealVar* poi = w->var("Nsig");
-  poi->setRange(0.,500.);  //i think this also sets the lower and upper limit for the prior!! 
+  poi->setRange(0.,700.);  //i think this also sets the lower and upper limit for the prior!! 
   sbModel.SetParametersOfInterest(*poi);
 
   ModelConfig *bModel = (ModelConfig*) sbModel.Clone();
-  bModel->SetPdf("PDFtot");
+  bModel->SetPdf("PDFwith");
   bModel->SetName("B model: poi=0");      
   poi->setVal(0);// for the background only model, nsig = 0
   bModel->SetSnapshot(*poi);
@@ -105,7 +110,7 @@ void bayesianAnalyser()
 
   //Construct the bayesian calculator
   BayesianCalculator bc(*(w->data("withDH")), sbModel); // rooabsdata but still as data histogram somehow
-  bc.SetConfidenceLevel(0.95);
+  bc.SetConfidenceLevel(0.997);
   bc.SetLeftSideTailFraction(0.); // set the fraction of probability content on the left tail Central limits use 0.5 (default case) for upper limits it is 0 and 1 for lower limit
   SimpleInterval* bcInt = bc.GetInterval();
 /*
@@ -124,6 +129,13 @@ void bayesianAnalyser()
 
   //Now let's see what the bayesian limit is
   cout << "Bayesian upper limit on Nsig = " << bcInt->UpperLimit() << endl;
+  
+  Nsig->Print();
+  nobackC->Print();
+  nobackSl->Print();
+  cuKa1N->Print();
+  meanCuKa1->Print();
+  sigmaCuKa->Print();
 
   // plot now the result of the scan 
   //First the CLs
@@ -133,16 +145,24 @@ void bayesianAnalyser()
 
   // plot in a new canvas with style
   TCanvas dataCanvas("dataCanvas");
-  dataCanvas.Divide(2,1);
-  dataCanvas.SetLogy(false);
+  //dataCanvas.Divide(2,1);
+  //dataCanvas.SetLogy(false);
   dataCanvas.cd(1);
   //plot->Draw("2CL");
-  dataCanvas.cd(2);
+  //dataCanvas.cd(2);
   bcPlot->Draw();
 
-  dataCanvas.SaveAs("exercise_2.gif");
+  dataCanvas.SaveAs("bayesianAnalysis.gif");
 
-
+  TFile *outF = new TFile("bayesFile.root","recreate");
+  outF->cd();
+  
+  bcPlot->Write();
+  
+  outF->Close();
   
 }
 
+//TFile *f = new TFile("bayesFile.root")
+//f->ls()
+//RooPlot *pl = (RooPlot*)f->Get("frame_Nsig_4d1d430")
